@@ -2,13 +2,17 @@ import types
 
 import unittest
 from mock import MagicMock, patch
-
+import time
 from collections import OrderedDict
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from seismograph.ext.selenium.proxy.proxy import factory_method, WebElementList, WebElementProxy, WebDriverProxy
 from seismograph.utils.common import waiting_for
+
+from seismograph.ext.selenium.polling import PollingTimeoutExceeded
+
+
 
 class WebElementListTest(unittest.TestCase):
 
@@ -109,13 +113,15 @@ class WebDriverProxyTest(unittest.TestCase):
        self.browser = MagicMock()
        self.browser.action_chains = MagicMock()
        self.browser.touch_actions = MagicMock()
+
        self.config = MagicMock()
-       self.config.POLLING_TIMEOUT = 10
-       self.config.POLLING_DELAY = 10
+       self.config.POLLING_TIMEOUT = 1
+       self.config.POLLING_DELAY = 1
        self.config.PROJECT_URL = 'http://localhost'
        with patch.object(WebDriver, '__init__', return_value=None) as mock_method:
            self.wrapped = WebDriver(command_executor= self.TEST_URL)
            self.wrapped.item = self.TEST_STR_ITEM
+
            parent_for_we = MagicMock()
            id_for_we = MagicMock()
            def get_web_el(*args, **kwargs):
@@ -131,6 +137,8 @@ class WebDriverProxyTest(unittest.TestCase):
            self.wrapped.func_dummy = types.MethodType(get_dummy_obj, self.wrapped)
 
            self.el = WebDriverProxy(self.wrapped, config=self.config, browser=self.browser)
+
+
 
     def test_browser(self):
        self.assertEqual(self.el.browser, self.el)
@@ -159,14 +167,24 @@ class WebDriverProxyTest(unittest.TestCase):
        self.assertEqual(err, True)
 
     def test_do_polling(self):
-       with patch('seismograph.ext.selenium.polling.do', return_value = lambda: None) as do_method:
-           self.el.do_polling(lambda: None,  exceptions=[])
-           self.assertEqual(do_method.call_count, 1)
+        with patch('seismograph.ext.selenium.polling.do', return_value = lambda: None) as do_method:
+            self.el.do_polling(lambda: None,  exceptions=[])
+            self.assertEqual(do_method.call_count, 1)
+
+    def test_waiting_for(self):
+        self.assertEquals(self.el.waiting_for(lambda: 1, timeout=1, delay=None), 1)
+        try:
+            self.el.waiting_for(lambda: None, timeout=1, delay=None)
+        except PollingTimeoutExceeded as e:
+            err = True
+        self.assertEqual(err, True)
+        self.assertEquals(e.message, 'Wait timeout "1" has been exceeded')
+        self.assertEquals(self.el.waiting_for(lambda: 1), waiting_for(lambda :1))
 
     def test_disable_polling(self):
-       with self.el.disable_polling():
-           self.assertEqual(self.el.allow_polling, False)
-       self.assertEqual(self.el.allow_polling, True)
+        with self.el.disable_polling():
+            self.assertEqual(self.el.allow_polling, False)
+        self.assertEqual(self.el.allow_polling, True)
  
     def test_getattr_from_webdriver_or_webelemen(self):
        self.assertEqual(self.el.__getattr_from_webdriver_or_webelement__('item'), self.TEST_STR_ITEM)
@@ -203,6 +221,8 @@ class WebDriverProxyTest(unittest.TestCase):
 
     def test_bool(self):
        self.assertEqual(bool(self.el), True)
+
+
 
 if __name__ == '__main__':
     unittest.main()
