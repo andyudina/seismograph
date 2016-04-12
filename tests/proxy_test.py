@@ -12,7 +12,7 @@ from seismograph.utils.common import waiting_for
 
 from seismograph.ext.selenium.polling import PollingTimeoutExceeded
 
-
+import seismograph
 
 class WebElementListTest(unittest.TestCase):
 
@@ -177,16 +177,26 @@ class WebDriverProxyTest(unittest.TestCase):
             self.el.waiting_for(lambda: None, timeout=1, delay=None)
         except PollingTimeoutExceeded as e:
             err = True
+            self.assertEquals(e.message, 'Wait timeout "1" has been exceeded')
         self.assertEqual(err, True)
-        self.assertEquals(e.message, 'Wait timeout "1" has been exceeded')
         self.assertEquals(self.el.waiting_for(lambda: 1), waiting_for(lambda :1))
 
     def test_disable_polling(self):
         with self.el.disable_polling():
             self.assertEqual(self.el.allow_polling, False)
         self.assertEqual(self.el.allow_polling, True)
- 
-    def test_getattr_from_webdriver_or_webelemen(self):
+
+    # @patch('seismograph.utils.common.waiting_for')
+    # def test_wait_ready(self, waiting_for):
+    #     print(seismograph.utils.common.waiting_for)
+    #     with patch('seismograph.ext.selenium.proxy.proxy.BaseProxy.__len__', return_value = 1) as do_method:
+    #         with patch('time.sleep', return_value = 1) as sleep:
+    #             self.el.wait_ready()
+    #             self.assertEqual(sleep.calls_count, 15)
+
+
+    @patch('seismograph.ext.selenium.proxy.proxy.WebDriverProxy.allow_polling')
+    def test_getattr_from_webdriver_or_webelemen(self, allow_polling):
        self.assertEqual(self.el.__getattr_from_webdriver_or_webelement__('item'), self.TEST_STR_ITEM)
 
     @patch('seismograph.ext.selenium.proxy.proxy.WebDriverProxy.allow_polling')

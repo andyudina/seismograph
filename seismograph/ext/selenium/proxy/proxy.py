@@ -268,7 +268,7 @@ class BaseProxy(object):
         finally:
             self._allow_polling = True
 
-    def wait_ready(self, tries=15, delay=0.01):
+    def wait_ready(self, tries=15, delay=0.01):)
         waiting_for(
             is_ready_state_complete,
             args=(self.browser, ),
